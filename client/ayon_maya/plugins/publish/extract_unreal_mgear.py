@@ -78,44 +78,29 @@ class ExtractMgear(plugin.MayaExtractorPlugin,
                 .get(cls.__name__, {})
             )
             is_enabled = plugin_attr_values.get("active", cls.active)
-
+        
+        attr_defs = []
         extract_mgear_opt = super().get_attr_defs_for_instance(create_context,
                                                                instance)
         
         if extract_mgear_opt:
-            attr_defs = extract_mgear_opt
-        
+            attr_defs.extend(extract_mgear_opt)
+
             attr_defs.extend([
                 UISeparatorDef("sep_mgear_options", visible=is_enabled),
                 UILabelDef("mGear Options", visible=is_enabled),
             ])
-
-            attr_defs.append(BoolDef("skinning",
-                    label="Skinning",
-                    tooltip="",
-                    visible=is_enabled,
-                    default=True))
-            attr_defs.append(BoolDef("blendshapes",
-                    label="Blendshapes",
-                    tooltip="",
-                    visible=is_enabled,
-                    default=True))
-            attr_defs.append(BoolDef("partitions",
-                    label="Partitions",
-                    tooltip="",
-                    visible=is_enabled,
-                    default=True))
-            attr_defs.append(BoolDef("cullJoints",
-                label="Cull Joints",
-                tooltip="",
-                visible=is_enabled,
-                default=False))
+            
+            attr_defs.extend(cls.get_additional_attr_defs(is_enabled))
             
             attr_defs.append(
                 UISeparatorDef("sep_mgear_options_end")
             )
 
         return attr_defs
+    
+    def get_additional_attr_defs(cls, visible):
+        pass
 
 class ExtractMgearRig(ExtractMgear):
     """Extractor for Mgear Rig
@@ -127,9 +112,37 @@ class ExtractMgearRig(ExtractMgear):
     # Exposed in settings
     optional = True
     active = True
+    
+    @classmethod
+    def get_additional_attr_defs(cls, is_enabled):
+        attr_defs = []
+        attr_defs.append(BoolDef("skinning",
+            label="Skinning",
+            tooltip="",
+            visible=is_enabled,
+            default=True))
+        attr_defs.append(BoolDef("blendshapes",
+                label="Blendshapes",
+                tooltip="",
+                visible=is_enabled,
+                default=True))
+        attr_defs.append(BoolDef("partitions",
+                label="Partitions",
+                tooltip="",
+                visible=is_enabled,
+                default=True))
+        attr_defs.append(BoolDef("cullJoints",
+            label="Cull Joints",
+            tooltip="",
+            visible=is_enabled,
+            default=False))
+        
+        return attr_defs
 
     def process(self, instance):
         print("HEllo I'm Mgear Rig extractor")
+        attr_values = self.get_attr_values_from_data(instance.data)
+        print(attr_values)
 
 class ExtractMgearAnim(ExtractMgear):
     """Extractor for Mgear Animation
