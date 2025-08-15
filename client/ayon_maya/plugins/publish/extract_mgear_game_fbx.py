@@ -22,9 +22,6 @@ class ExtractMgearGame(plugin.MayaExtractorPlugin,
     def filter_members(self, members):
         print("filter_members", members)
         return members
-
-    def process(self, instance):
-        print("HEllo I'm Mgear abstract extractor")
     
     @classmethod
     def register_create_context_callbacks(cls, create_context):
@@ -61,6 +58,11 @@ class ExtractMgearGame(plugin.MayaExtractorPlugin,
 
     @classmethod
     def get_attr_defs_for_instance(cls, create_context, instance):
+        try:
+            import mgear
+        except ModuleNotFoundError:
+            return []
+        
         is_enabled = cls.enabled
         
         if not is_enabled:
@@ -138,11 +140,15 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
         return attr_defs
 
     def process(self, instance):
-        print("HEllo I'm Mgear Skeletal Mesh extractor")
-        members = instance.data("setMembers")
         attr_values = self.get_attr_values_from_data(instance.data)
-        print(attr_values)
-        print(members)
+
+        if attr_values:
+            print("HEllo I'm Mgear Skeletal Mesh extractor")
+           
+            if self.is_active(instance.data):
+                members = instance.data("setMembers")
+                print(attr_values, members)
+
 
 class ExtractMgearAnimation(ExtractMgearGame):
     """Extractor for Mgear Animation
