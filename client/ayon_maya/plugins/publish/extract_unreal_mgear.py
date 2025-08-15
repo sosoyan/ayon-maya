@@ -18,8 +18,6 @@ class ExtractMgear(plugin.MayaExtractorPlugin,
 
     enabled = True
     label = "Extract Mgear"
-    families = ["rig", "animation"]
-
 
     def filter_members(self, members):
         print("filter_members", members)
@@ -103,10 +101,10 @@ class ExtractMgear(plugin.MayaExtractorPlugin,
         pass
 
 class ExtractMgearRig(ExtractMgear):
-    """Extractor for Mgear Rig
+    """Extractor for Mgear Skeletal Mesh
     """
 
-    label = "Extract mGear Rig"
+    label = "Extract mGear Skeletal Mesh"
     families = ["rig"]
 
     # Exposed in settings
@@ -140,9 +138,11 @@ class ExtractMgearRig(ExtractMgear):
         return attr_defs
 
     def process(self, instance):
-        print("HEllo I'm Mgear Rig extractor")
+        print("HEllo I'm Mgear Skeletal Mesh extractor")
+        members = instance.data("setMembers")
         attr_values = self.get_attr_values_from_data(instance.data)
         print(attr_values)
+        print(members)
 
 class ExtractMgearAnim(ExtractMgear):
     """Extractor for Mgear Animation
