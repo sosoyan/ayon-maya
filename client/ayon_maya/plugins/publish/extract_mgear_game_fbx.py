@@ -7,9 +7,18 @@ from ayon_core.lib import BoolDef, EnumDef, UILabelDef, UISeparatorDef
 from ayon_maya.api.lib import maintained_selection, maintained_time
 from ayon_maya.api import plugin
 
+import mgear.pymaya as pm
+
+from mgear.shifter.game_tools_fbx import (
+    anim_clip_widgets,
+    fbx_export_node,
+    partitions_outliner,
+    utils,
+    partition_thread
+)
+
 from maya import cmds
 import maya.api.OpenMaya as om
-
 
 class ExtractMgearGame(plugin.MayaExtractorPlugin,
                        publish.OptionalPyblishPluginMixin):
@@ -58,11 +67,7 @@ class ExtractMgearGame(plugin.MayaExtractorPlugin,
 
     @classmethod
     def get_attr_defs_for_instance(cls, create_context, instance):
-        try:
-            import mgear
-        except ModuleNotFoundError:
-            return []
-        
+
         is_enabled = cls.enabled
         
         if not is_enabled:
@@ -147,8 +152,19 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
            
             if self.is_active(instance.data):
                 members = instance.data("setMembers")
-                print(attr_values, members)
+                jnt_root = utils.get_joint_root()
+                geo_root = utils.get_geo_root()
+                
+                rig_geo_roots_grp_set = pm.ls("rig_geo_roots_grp", type="objectSet")
+                geo_roots = pm.sets(rig_geo_roots_grp_set, q=True, nodesOnly=False)
+                publish_dir = instance.data("publishDir")
 
+                #geo_root_set = next((i for i in members if i == "mgear_geo_roots"), utils.get_geo_root())
+                #geo_roots = pm.sets(geo_root_set, q=True, nodesOnly=False)
+                #geo_root = utils.get_geo_root()
+                    
+                            
+        print(STOP)
 
 class ExtractMgearAnimation(ExtractMgearGame):
     """Extractor for Mgear Animation
