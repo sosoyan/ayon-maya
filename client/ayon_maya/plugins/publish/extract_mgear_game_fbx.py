@@ -11,8 +11,8 @@ from maya import cmds
 import maya.api.OpenMaya as om
 
 
-class ExtractMgear(plugin.MayaExtractorPlugin,
-                   publish.OptionalPyblishPluginMixin):
+class ExtractMgearGame(plugin.MayaExtractorPlugin,
+                       publish.OptionalPyblishPluginMixin):
     """Extractor for Mgear.
     """
 
@@ -100,11 +100,11 @@ class ExtractMgear(plugin.MayaExtractorPlugin,
     def get_additional_attr_defs(cls, visible):
         pass
 
-class ExtractMgearRig(ExtractMgear):
+class ExtractMgearSkeletalMesh(ExtractMgearGame):
     """Extractor for Mgear Skeletal Mesh
     """
 
-    label = "Extract mGear Skeletal Mesh"
+    label = "Extract mGear Game Skeletal Mesh"
     families = ["rig"]
 
     # Exposed in settings
@@ -144,11 +144,11 @@ class ExtractMgearRig(ExtractMgear):
         print(attr_values)
         print(members)
 
-class ExtractMgearAnim(ExtractMgear):
+class ExtractMgearAnimation(ExtractMgearGame):
     """Extractor for Mgear Animation
     """
 
-    label = "Extract mGear Animation"
+    label = "Extract mGear Game Animation"
     families = ["animation"]
 
     # Exposed in settings
