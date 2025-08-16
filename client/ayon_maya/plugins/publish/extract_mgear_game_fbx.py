@@ -4,7 +4,7 @@ import os
 import tempfile
 
 from ayon_core.pipeline import publish
-from ayon_core.lib import BoolDef, EnumDef, UILabelDef, UISeparatorDef
+from ayon_core.lib import BoolDef, TextDef, UILabelDef, UISeparatorDef
 from ayon_maya.api.lib import maintained_selection, maintained_time
 from ayon_maya.api import plugin
 
@@ -30,10 +30,6 @@ class ExtractMgearGame(plugin.MayaExtractorPlugin,
 
     enabled = False
     label = "Extract mGear"
-
-    def filter_members(self, members):
-        print("filter_members", members)
-        return members
     
     @classmethod
     def register_create_context_callbacks(cls, create_context):
@@ -107,8 +103,9 @@ class ExtractMgearGame(plugin.MayaExtractorPlugin,
 
         return attr_defs
     
+    @classmethod
     def get_additional_attr_defs(cls, visible):
-        pass
+        return []
 
 class ExtractMgearSkeletalMesh(ExtractMgearGame):
     """Extractor for Mgear Skeletal Mesh
@@ -199,14 +196,34 @@ class ExtractMgearAnimation(ExtractMgearGame):
     """Extractor for Mgear Animation
     """
 
-    label = "mGear Game Animation"
+    label = "Extract mGear Game Animation"
     families = ["animation"]
 
     # Exposed in settings
     optional = True
     active = True
+    enabled = True
 
+    @classmethod
+    def get_additional_attr_defs(cls, is_enabled):
+        attr_defs = []
+        attr_defs.append(TextDef("clipName",
+            label="Clip name override",
+            tooltip="",
+            visible=is_enabled,
+            default=""))
+        
+        return attr_defs
+    
     def process(self, instance):
         print("HEllo I'm Mgear Anim extractor")
+        attr_values = self.get_attr_values_from_data(instance.data)
+
+        if attr_values:
+           
+            if self.is_active(instance.data):
+                product = instance.data("productName")
+
+        print(STOP)
 
 
