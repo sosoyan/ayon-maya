@@ -1,22 +1,14 @@
-import contextlib
-import json
 import os
-import tempfile
 
 from ayon_core.pipeline import publish
 from ayon_core.lib import BoolDef, TextDef, UILabelDef, UISeparatorDef
-from ayon_maya.api.lib import maintained_selection, maintained_time
 from ayon_maya.api import plugin
 
 import mgear.pymaya as pm
 
-from mgear.shifter.game_tools_fbx import (
-    utils,
-    partition_thread
-)
+from mgear.shifter.game_tools_fbx import utils,partition_thread
 
 from maya import cmds
-import maya.api.OpenMaya as om
 
 
 class ExtractMgearGame(plugin.MayaExtractorPlugin,
@@ -49,7 +41,8 @@ class ExtractMgearGame(plugin.MayaExtractorPlugin,
 
     @classmethod
     def on_values_changed(cls, event):
-        """Update instance attribute definitions on attribute changes."""
+        """Update instance attribute definitions on attribute changes.
+        """
         for instance_change in event["changes"]:
             # First check if there"s a change we want to respond to
             instance = instance_change["instance"]
