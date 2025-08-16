@@ -1,6 +1,7 @@
 import contextlib
 import json
 import os
+import tempfile
 
 from ayon_core.pipeline import publish
 from ayon_core.lib import BoolDef, EnumDef, UILabelDef, UISeparatorDef
@@ -9,6 +10,7 @@ from ayon_maya.api import plugin
 
 import mgear.pymaya as pm
 
+from mgear.vendor.Qt.QtCore import QThread
 from mgear.shifter.game_tools_fbx import (
     anim_clip_widgets,
     fbx_export_node,
@@ -20,13 +22,14 @@ from mgear.shifter.game_tools_fbx import (
 from maya import cmds
 import maya.api.OpenMaya as om
 
+
 class ExtractMgearGame(plugin.MayaExtractorPlugin,
                        publish.OptionalPyblishPluginMixin):
     """Extractor for Mgear.
     """
 
-    enabled = True
-    label = "Extract Mgear"
+    enabled = False
+    label = "Extract mGear"
 
     def filter_members(self, members):
         print("filter_members", members)
@@ -117,7 +120,25 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
     # Exposed in settings
     optional = True
     active = True
+    enabled = True
     
+    def __init__(self):
+        super().__init__()
+
+        self.ext_dict = {
+            "up_axis": "Y",
+            "file_type": "Binary",
+            "fbx_version": "FBX 2000",
+            "remove_namespace": True,
+            "scene_clean": True,
+            "use_partitions": False,
+            "cull_joints": False,
+            "export_tab": 0,
+            "ue_enabled": False,
+            "ue_file_path": "",
+            "ue_active_skeleton": ""
+        }
+
     @classmethod
     def get_additional_attr_defs(cls, is_enabled):
         attr_defs = []
@@ -131,16 +152,6 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                 tooltip="",
                 visible=is_enabled,
                 default=True))
-        attr_defs.append(BoolDef("partitions",
-                label="Partitions",
-                tooltip="",
-                visible=is_enabled,
-                default=True))
-        attr_defs.append(BoolDef("cullJoints",
-            label="Cull Joints",
-            tooltip="",
-            visible=is_enabled,
-            default=False))
         
         return attr_defs
 
@@ -148,29 +159,47 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
         attr_values = self.get_attr_values_from_data(instance.data)
 
         if attr_values:
-            print("HEllo I'm Mgear Skeletal Mesh extractor")
            
             if self.is_active(instance.data):
-                members = instance.data("setMembers")
-                jnt_root = utils.get_joint_root()
-                geo_root = utils.get_geo_root()
                 
-                rig_geo_roots_grp_set = pm.ls("rig_geo_roots_grp", type="objectSet")
-                geo_roots = pm.sets(rig_geo_roots_grp_set, q=True, nodesOnly=False)
-                publish_dir = instance.data("publishDir")
+                geo_roots = utils.get_geo_root()
+                jnt_roots =  utils.get_joint_root()
 
-                #geo_root_set = next((i for i in members if i == "mgear_geo_roots"), utils.get_geo_root())
-                #geo_roots = pm.sets(geo_root_set, q=True, nodesOnly=False)
-                #geo_root = utils.get_geo_root()
+                if geo_roots and jnt_roots:
+
+                    asset = instance.data("anatomyData").get("asset")
+                    product = instance.data("productName")
+                    version = instance.data("version")
+                    extension = "fbx"
+
+                    self.ext_dict["geo_roots"] = geo_roots
+                    self.ext_dict["joint_root"] = jnt_roots[0].name()
+                    self.ext_dict["file_path"] = instance.data("stagingDir").replace("\\", "/")
+                    self.ext_dict["file_name"] = f"{asset}_{product}_v{version:03}.{extension}"
+                    self.ext_dict["skinning"] = attr_values["skinning"]
+                    self.ext_dict["blendshapes"] = attr_values["blendshapes"]
+
+                    self.log.debug(f"mGear export data - {self.ext_dict}")
+
+                    pt = partition_thread.PartitionThread(self.ext_dict)
+                    pt.init_data()
+                    pt.start()
+                    pt.wait()
                     
-                            
-        print(STOP)
+                    representation = {
+                        "name": "fbx",
+                        "ext": extension,
+                        "files": self.ext_dict["file_name"],
+                        "stagingDir": self.ext_dict["file_path"]
+                    }
+                    
+                    instance.data["representations"].append(representation)
 
 class ExtractMgearAnimation(ExtractMgearGame):
     """Extractor for Mgear Animation
     """
 
-    label = "Extract mGear Game Animation"
+    label = "mGear Game Animation"
     families = ["animation"]
 
     # Exposed in settings
