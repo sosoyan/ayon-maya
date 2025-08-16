@@ -194,17 +194,6 @@ class ExtractMgearAnimation(ExtractMgearGame):
     active = True
     enabled = True
     
-    @classmethod
-    def get_additional_attr_defs(cls, is_enabled):
-        attr_defs = []
-        attr_defs.append(TextDef("clipName",
-            label="Clip name override",
-            tooltip="",
-            visible=is_enabled,
-            default=""))
-        
-        return attr_defs
-    
     def process(self, instance):
         attr_values = self.get_attr_values_from_data(instance.data)
 
