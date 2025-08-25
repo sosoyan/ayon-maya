@@ -1,21 +1,18 @@
 import os
-
+import pyblish.api
 from ayon_core.pipeline import publish
-from ayon_core.lib import BoolDef, TextDef, UILabelDef, UISeparatorDef
+from ayon_core.lib import BoolDef, UILabelDef, UISeparatorDef
 from ayon_maya.api import plugin
-
-import mgear.pymaya as pm
 
 from mgear.shifter.game_tools_fbx import utils,partition_thread
 
 from maya import cmds
 
-
 class ExtractMgearGame(plugin.MayaExtractorPlugin,
                        publish.OptionalPyblishPluginMixin):
     """Extractor for Mgear.
     """
-
+    order = pyblish.api.ExtractorOrder + 0.1
     enabled = False
     label = "Extract mGear"
     
