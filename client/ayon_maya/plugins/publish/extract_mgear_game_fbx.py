@@ -270,7 +270,7 @@ class ExtractMgearAnimation(ExtractMgearGame):
         for geo in geo_roots:
             for node in find_blendshape_nodes(geo):
                 for bs_attr in get_blendshape_attrs(node):
-                    attr_name = bs_attr.split(":")[-1].replace(".", "__")
+                    attr_name = bs_attr.split(".")[-1]
                     
                     cmds.addAttr(
                         joint_root, 
