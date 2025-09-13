@@ -86,12 +86,49 @@ def get_blendshape_attrs(obj):
 
     return attrs
 
+class LocalRefs:
+    def __init__(self, use_partitions, stage_dir, geo_roots):
+        self.use_partitions = use_partitions
+        self.stage_dir = stage_dir
+        self.geo_roots = geo_roots
+        self.scene_path = ""
+        self.tmp_scene_path = ""
+        self.is_referenced = False
+
+    def __enter__(self):
+        
+        if self.use_partitions:
+
+            self.is_referenced = any(cmds.referenceQuery(
+                obj, isNodeReferenced=True) for obj in self.geo_roots)
+            
+            if self.is_referenced:
+
+                self.scene_path = cmds.file(query=True, sceneName=True)
+                self.tmp_scene_path = os.path.join(self.stage_dir, os.path.basename(self.scene_path))
+                
+                cmds.file(rename=self.tmp_scene_path)
+                ma_file = cmds.file(type="mayaAscii", force=True, pr=False, exportAll=True)
+
+                cmds.file(ma_file, open=True, force=True, save=False)
+
+        return True
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.is_referenced:
+            cmds.file(self.scene_path, open=True, force=True, save=False)
+            cmds.file(modified=False)
+
+            os.remove(self.tmp_scene_path)
+        
+        return False
+
 class ExtractMgearGame(plugin.MayaExtractorPlugin,
                        publish.OptionalPyblishPluginMixin):
     """Extractor for Mgear.
     """
     order = pyblish.api.ExtractorOrder + 0.1
-    order = pyblish.api.ExtractorOrder - 1
+
     enabled = False
     label = "Extract mGear"
     
@@ -239,37 +276,31 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                 jnt_roots =  utils.get_joint_root()
 
                 if geo_roots and jnt_roots:
-
+                    
                     folder_name = instance.data("anatomyData")["folder"]["name"]
                     product_name = instance.data("productName")
                     version = instance.data("version")
                     padding = instance.data(
                         "projectEntity")['config']['templates']['common']['version_padding']
+                    staging_dir = instance.data("stagingDir").replace("\\", "/")
                     extension = "fbx"
 
                     self.exp_config["export_tab"] =  0
                     self.exp_config["geo_roots"] = geo_roots
                     self.exp_config["joint_root"] = jnt_roots[0].name()
-                    self.exp_config["file_path"] = instance.data("stagingDir").replace("\\", "/")
+                    self.exp_config["file_path"] = staging_dir
                     self.exp_config["file_name"] = f"{folder_name}_{product_name}"
                     self.exp_config["skinning"] = attr_values["skinning"]
                     self.exp_config["blendshapes"] = attr_values["blendshapes"]
                     self.exp_config["use_partitions"] = attr_values["use_partitions"]
                     self.exp_config["cull_joints"] = attr_values["cull_joints"]
 
-                    exp_file_names = []
-                    if self.exp_config["use_partitions"]:
+                    representations = []
+                    use_partitions = attr_values["use_partitions"]
+                    
+                    if use_partitions:
+                        self.exp_config["partitions"] = {}
                         partition_sets = cmds.ls("rig_prt_*", type="objectSet")
-                        geo_grp_set = utils.get_geo_grp()
-                        geo_prp_geos = cmds.sets(geo_grp_set, q=True)
-
-                        master_geos = []
-                        self.exp_config["partitions"] = {"master": {
-                            "enabled": True,
-                            "skeletal_meshes": master_geos
-                            }}
-                        
-                        exp_file_names.append(f"{folder_name}_{product_name}_master.{extension}")
 
                         for prt_set in partition_sets:
                             prt_geos = cmds.sets(prt_set, q=True)
@@ -277,45 +308,43 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
 
                             prt_name = prt_set.replace("rig_prt_", "")
                             self.exp_config["partitions"][prt_name] = {
-                                "enabled": True,
-                                "skeletal_meshes": prt_geos_long}
+                                    "enabled": True,
+                                    "skeletal_meshes": prt_geos_long
+                                }
                             
-                            exp_file_names.append(f"{folder_name}_{product_name}_{prt_name}.{extension}")
-                            
-                            for geo in geo_prp_geos:
-                                if geo not in prt_geos:
-                                    master_geos.append(cmds.ls(geo, l=True)[0])
+                            representations.append({
+                                "name": f"{prt_name}_{extension}",
+                                "ext": f"{prt_name}.{extension}",
+                                "files": f"{folder_name}_{product_name}_{prt_name}.{extension}",
+                                "stagingDir": staging_dir
+                            })
                     else:
-                        exp_file_names.append(f"{folder_name}_{product_name}.{extension}")
+                        representations.append({
+                                "name": extension,
+                                "ext": extension,
+                                "files": f"{folder_name}_{product_name}.{extension}",
+                                "stagingDir": staging_dir
+                            })
                     
                     self.log.debug(f"mGear export config - {self.exp_config}")
+                    
+                    with LocalRefs(use_partitions, staging_dir, geo_roots):                    
+                        pt = partition_thread.PartitionThread(self.exp_config)
+                        pt.init_data()
+                        pt.start()
+                        pt.wait()
 
-                    pt = partition_thread.PartitionThread(self.exp_config)
-                    pt.init_data()
-                    pt.start()
-                    pt.wait()
-
-                    file_path = self.exp_config["file_path"]
-
-                    file_names = []
-                    for fn in exp_file_names:
-                        folder_name, ext = os.path.splitext(fn)
-                        new_fn = f"{folder_name}_v{version:0{padding}d}{ext}"
+                    for rep in representations:
+                        fn = rep["files"]
+                        name, ext = os.path.splitext(fn)
+                        new_fn = f"{name}_v{version:0{padding}d}{ext}"
                         
-                        os.rename(
-                            os.path.join(file_path, fn), 
-                            os.path.join(file_path, new_fn))
-                            
-                    representation = {
-                        "name": extension,
-                        "ext": extension,
-                        "files": file_names,
-                        "stagingDir": file_path
-                    }
-
-                    print(TEMP)
-
-                    instance.data["representations"].append(representation)
+                        os.rename(os.path.join(staging_dir, fn), 
+                                  os.path.join(staging_dir, new_fn))
+                        
+                        rep["files"] = new_fn
+                    
+                    instance.data["representations"].extend(representations)
 
 class ExtractMgearAnimation(ExtractMgearGame):
     """Extractor for Mgear Animation
@@ -360,9 +389,11 @@ class ExtractMgearAnimation(ExtractMgearGame):
 
                 if geo_roots and jnt_roots:
                     
-                    asset = instance.data("anatomyData").get("asset")
-                    product = instance.data("productName")
+                    folder_name = instance.data("anatomyData")["folder"]["name"]
+                    product_name = instance.data("productName")
                     version = instance.data("version")
+                    padding = instance.data(
+                        "projectEntity")['config']['templates']['common']['version_padding']
                     frame_start = instance.data("frameStart")
                     frame_end = instance.data("frameEnd")
                     fps = instance.data("taskEntity").get("attrib").get("fps")
@@ -371,7 +402,7 @@ class ExtractMgearAnimation(ExtractMgearGame):
                     self.exp_config["geo_roots"] = geo_roots
                     self.exp_config["joint_root"] = jnt_roots[0].name()
                     self.exp_config["file_path"] = instance.data("stagingDir").replace("\\", "/")
-                    self.exp_config["file_name"] = f"{asset}_{product}_v{version:03}"
+                    self.exp_config["file_name"] = f"{folder_name}_{product_name}_v{version:03}"
                     
                     self.create_blendshape_attrs(self.exp_config["geo_roots"], 
                                                  self.exp_config["joint_root"])
@@ -379,7 +410,9 @@ class ExtractMgearAnimation(ExtractMgearGame):
                     self.log.debug(f"mGear export data - {self.exp_config}")
                     
                     current_scene_path = cmds.file(query=True, sceneName=True)
-                    master_path = os.path.join(self.exp_config["file_path"], f"{asset}_{product}_v{version:03}.ma")
+                    master_path = os.path.join(
+                        self.exp_config["file_path"], 
+                        f"{folder_name}_{product_name}_v{version:0{padding}}.ma")
 
                     cmds.file(rename=master_path)
                     ma_file = cmds.file(type="mayaAscii", force=True, pr=False, exportAll=True)
@@ -388,7 +421,7 @@ class ExtractMgearAnimation(ExtractMgearGame):
 
                     cmds.parent(self.exp_config["joint_root"], world=True)
                     
-                    clip_data = {"title": product,
+                    clip_data = {"title": product_name,
                                 "enabled": True,
                                 "frame_rate": fps,
                                 "start_frame": frame_start,
