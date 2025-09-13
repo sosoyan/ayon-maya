@@ -296,11 +296,11 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                     self.exp_config["cull_joints"] = attr_values["cull_joints"]
 
                     representations = []
-                    use_partitions = attr_values["use_partitions"]
+                    partition_sets = cmds.ls("rig_prt_*", type="objectSet")
+                    use_partitions = partition_sets and attr_values["use_partitions"]
                     
                     if use_partitions:
                         self.exp_config["partitions"] = {}
-                        partition_sets = cmds.ls("rig_prt_*", type="objectSet")
 
                         for prt_set in partition_sets:
                             prt_geos = cmds.sets(prt_set, q=True)
