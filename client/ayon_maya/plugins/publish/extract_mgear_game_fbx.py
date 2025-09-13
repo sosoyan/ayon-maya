@@ -106,6 +106,7 @@ class LocalRefs:
 
                 self.scene_path = cmds.file(query=True, sceneName=True)
                 self.tmp_scene_path = os.path.join(self.stage_dir, os.path.basename(self.scene_path))
+                cmds.file(save=True)
                 
                 cmds.file(rename=self.tmp_scene_path)
                 ma_file = cmds.file(type="mayaAscii", force=True, pr=False, exportAll=True)
