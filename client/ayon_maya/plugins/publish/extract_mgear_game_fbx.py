@@ -4,7 +4,11 @@ from ayon_core.pipeline import publish
 from ayon_core.lib import BoolDef, UILabelDef, UISeparatorDef
 from ayon_maya.api import plugin
 
-from mgear.shifter.game_tools_fbx import utils, partition_thread
+try:
+    from mgear.shifter.game_tools_fbx import utils, partition_thread
+    MGEAR_INSTALLED = True
+except ImportError:
+    MGEAR_INSTALLED = False
 
 from maya import cmds
 
@@ -192,7 +196,7 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
     # Exposed in settings
     optional = True
     active = True
-    enabled = True
+    enabled = MGEAR_INSTALLED
 
     @classmethod
     def get_additional_attr_defs(cls, is_enabled):
@@ -214,7 +218,7 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                 label="Use Partitions",
                 tooltip="",
                 visible=is_enabled,
-                default=False))
+                default=True))
         
         attr_defs.append(BoolDef("cull_joints",
                 label="Cull Joints",
@@ -236,16 +240,18 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
 
                 if geo_roots and jnt_roots:
 
-                    asset = instance.data("anatomyData").get("asset")
-                    product = instance.data("productName")
+                    folder_name = instance.data("anatomyData")["folder"]["name"]
+                    product_name = instance.data("productName")
                     version = instance.data("version")
+                    padding = instance.data(
+                        "projectEntity")['config']['templates']['common']['version_padding']
                     extension = "fbx"
-                    
+
                     self.exp_config["export_tab"] =  0
                     self.exp_config["geo_roots"] = geo_roots
                     self.exp_config["joint_root"] = jnt_roots[0].name()
                     self.exp_config["file_path"] = instance.data("stagingDir").replace("\\", "/")
-                    self.exp_config["file_name"] = f"{asset}_{product}"
+                    self.exp_config["file_name"] = f"{folder_name}_{product_name}"
                     self.exp_config["skinning"] = attr_values["skinning"]
                     self.exp_config["blendshapes"] = attr_values["blendshapes"]
                     self.exp_config["use_partitions"] = attr_values["use_partitions"]
@@ -263,7 +269,7 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                             "skeletal_meshes": master_geos
                             }}
                         
-                        exp_file_names.append(f"{asset}_{product}_master.{extension}")
+                        exp_file_names.append(f"{folder_name}_{product_name}_master.{extension}")
 
                         for prt_set in partition_sets:
                             prt_geos = cmds.sets(prt_set, q=True)
@@ -274,13 +280,13 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                                 "enabled": True,
                                 "skeletal_meshes": prt_geos_long}
                             
-                            exp_file_names.append(f"{asset}_{product}_{prt_name}.{extension}")
+                            exp_file_names.append(f"{folder_name}_{product_name}_{prt_name}.{extension}")
                             
                             for geo in geo_prp_geos:
                                 if geo not in prt_geos:
                                     master_geos.append(cmds.ls(geo, l=True)[0])
                     else:
-                        exp_file_names.append(f"{asset}_{product}.{extension}")
+                        exp_file_names.append(f"{folder_name}_{product_name}.{extension}")
                     
                     self.log.debug(f"mGear export config - {self.exp_config}")
 
@@ -293,8 +299,8 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
 
                     file_names = []
                     for fn in exp_file_names:
-                        name, ext = os.path.splitext(fn)
-                        new_fn = f"{name}_v{version:03d}{ext}"
+                        folder_name, ext = os.path.splitext(fn)
+                        new_fn = f"{folder_name}_v{version:0{padding}d}{ext}"
                         
                         os.rename(
                             os.path.join(file_path, fn), 
@@ -321,7 +327,7 @@ class ExtractMgearAnimation(ExtractMgearGame):
     # Exposed in settings
     optional = True
     active = True
-    enabled = True
+    enabled = MGEAR_INSTALLED
     
     def create_blendshape_attrs(self, geo_roots, joint_root):
         for geo in geo_roots:
