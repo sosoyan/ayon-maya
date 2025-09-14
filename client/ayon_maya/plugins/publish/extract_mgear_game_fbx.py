@@ -14,14 +14,12 @@ from maya import cmds
 
 
 def get_all_children(obj):
-    """
-    Recursively collect all children of a given object.
-    """
+
     children = cmds.listRelatives(obj, children=True, fullPath=True) or []
     all_nodes = []
     for child in children:
         all_nodes.append(child)
-        all_nodes.extend(get_all_children(child))  # recursion
+        all_nodes.extend(get_all_children(child))
     return all_nodes
 
 def find_blendshape_nodes(root):
@@ -29,10 +27,10 @@ def find_blendshape_nodes(root):
     Return list of objects under root that have blendshapes.
     """
     result = []
-    # get all children (including nested)
+    
     all_nodes = get_all_children(root)
     for node in all_nodes:
-        # get shape node if transform
+        
         shapes = cmds.listRelatives(node, shapes=True, fullPath=True) or []
         for shape in shapes:
             history = cmds.listHistory(shape) or []
@@ -40,23 +38,17 @@ def find_blendshape_nodes(root):
                 if cmds.nodeType(h) == "blendShape":
                     result.append(node)
                     break
-    return list(set(result))  # unique list
+    return list(set(result))
 
 def get_blendshape_attrs(obj):
-    """
-    Given a transform (obj), return a list of its blendshape weight attributes.
-    Prefers alias names (e.g. 'blendShape1.JawOpen'); falls back to weight plugs
-    (e.g. 'blendShape1.weight[0]') if no alias exists.
-    """
+
     if not cmds.objExists(obj):
         raise RuntimeError("Object '{}' does not exist.".format(obj))
 
-    # Get non-intermediate shape nodes under this transform
     shapes = cmds.listRelatives(obj, shapes=True, ni=True, fullPath=True) or []
     if not shapes:
         return []
 
-    # Collect blendShape nodes from history of all shapes
     bs_nodes = set()
     for s in shapes:
         hist = cmds.listHistory(s, pruneDagObjects=True) or []
@@ -69,15 +61,13 @@ def get_blendshape_attrs(obj):
 
     attrs = []
     for bs in bs_nodes:
-        # Build a mapping from "weight[i]" -> alias name (if any)
         alias_list = cmds.aliasAttr(bs, q=True) or []
         plug_to_alias = {}
         for i in range(0, len(alias_list), 2):
-            alias_name = alias_list[i]            # e.g. "JawOpen"
-            real_attr  = alias_list[i+1]          # e.g. "weight[0]"
+            alias_name = alias_list[i]
+            real_attr  = alias_list[i+1]
             plug_to_alias[real_attr] = alias_name
 
-        # Get the actual weight indices present on the node
         indices = cmds.getAttr(bs + ".weight", multiIndices=True) or []
         for idx in indices:
             plug = "{}.weight[{}]".format(bs, idx)
@@ -377,7 +367,20 @@ class ExtractMgearAnimation(ExtractMgearGame):
                     cmds.connectAttr(bs_attr, f"{joint_root}.{attr_name}")
 
                     self.log.debug(f"added root blendshape attribute {joint_root}.{attr_name}")
-                    
+
+    @classmethod
+    def get_additional_attr_defs(cls, is_enabled):
+        attr_defs = []
+        
+        attr_defs.append(BoolDef("blendshapes_anim",
+            label="BlendShapes Animation",
+            tooltip="",
+            visible=is_enabled,
+            default=True))
+        
+        return attr_defs
+
+
     def process(self, instance):
         attr_values = self.get_attr_values_from_data(instance.data)
 
@@ -405,8 +408,9 @@ class ExtractMgearAnimation(ExtractMgearGame):
                     self.exp_config["file_path"] = instance.data("stagingDir").replace("\\", "/")
                     self.exp_config["file_name"] = f"{folder_name}_{product_name}_v{version:03}"
                     
-                    self.create_blendshape_attrs(self.exp_config["geo_roots"], 
-                                                 self.exp_config["joint_root"])
+                    if attr_values["blendshapes_anim"]:
+                        self.create_blendshape_attrs(self.exp_config["geo_roots"], 
+                                                     self.exp_config["joint_root"])
 
                     self.log.debug(f"mGear export data - {self.exp_config}")
                     
