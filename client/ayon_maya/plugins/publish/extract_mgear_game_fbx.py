@@ -5,6 +5,7 @@ from ayon_core.lib import BoolDef, UILabelDef, UISeparatorDef
 from ayon_maya.api import plugin
 
 try:
+    from mgear.core import pyFBX
     from mgear.shifter.game_tools_fbx import utils, partition_thread
     MGEAR_INSTALLED = True
 except ImportError:
@@ -285,6 +286,11 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                     self.exp_config["blendshapes"] = attr_values["blendshapes"]
                     self.exp_config["use_partitions"] = attr_values["use_partitions"]
                     self.exp_config["cull_joints"] = attr_values["cull_joints"]
+
+                    fbx_presets_list = pyFBX.get_fbx_export_presets()
+
+                    if fbx_presets_list:
+                        self.exp_config["preset_path"] = fbx_presets_list[-1]
 
                     representations = []
                     partition_sets = cmds.ls("rig_prt_*", type="objectSet")
