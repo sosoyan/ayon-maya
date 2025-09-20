@@ -1,7 +1,7 @@
 import os
 import pyblish.api
 from ayon_core.pipeline import publish
-from ayon_core.lib import BoolDef, UILabelDef, UISeparatorDef
+from ayon_core.lib import EnumDef, BoolDef, UILabelDef, UISeparatorDef
 from ayon_maya.api import plugin
 
 try:
@@ -255,6 +255,21 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                 visible=is_enabled,
                 default=False))
 
+        fbx_presets_list = pyFBX.get_fbx_export_presets()
+        
+        if fbx_presets_list:
+            
+            enum_items = {
+                path: os.path.splitext(os.path.basename(path))[0]
+                for path in fbx_presets_list
+            }
+            
+            attr_defs.append(EnumDef("fbx_preset",
+                        label="Fbx Preset",
+                        items=enum_items,
+                        visible=is_enabled,
+                        default=fbx_presets_list[-1]))
+
         return attr_defs
 
     def process(self, instance):
@@ -286,11 +301,7 @@ class ExtractMgearSkeletalMesh(ExtractMgearGame):
                     self.exp_config["blendshapes"] = attr_values["blendshapes"]
                     self.exp_config["use_partitions"] = attr_values["use_partitions"]
                     self.exp_config["cull_joints"] = attr_values["cull_joints"]
-
-                    fbx_presets_list = pyFBX.get_fbx_export_presets()
-
-                    if fbx_presets_list:
-                        self.exp_config["preset_path"] = fbx_presets_list[-1]
+                    self.exp_config["preset_path"] = attr_values["fbx_preset"]
 
                     representations = []
                     partition_sets = cmds.ls("rig_prt_*", type="objectSet")
