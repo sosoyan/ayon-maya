@@ -1,6 +1,5 @@
 import os
 import json
-import pyblish.api
 
 from pathlib import Path
 import maya.cmds as cmds
@@ -23,10 +22,8 @@ class ExtractAssemblyJson(plugin.MayaExtractorPlugin):
     """Extract Assembly JSON
 
     """
-
     label = "Extract Assembly (JSON)"
     families = ["layout"]
-    order = pyblish.api.ExtractorOrder
     
     def process(self, instance):
         staging_dir = self.staging_dir(instance)
@@ -37,6 +34,10 @@ class ExtractAssemblyJson(plugin.MayaExtractorPlugin):
         objects_data = []    
         for obj in members:
             child = cmds.listRelatives(obj, children=True, fullPath=False)
+            parent = cmds.listRelatives(obj,  parent=True, fullPath=True)
+            
+            object_name = cmds.ls(obj, shortNames=True)[0]
+            object_path = parent[0] if parent else "|"
 
             if child:
                 ref_path_parts = Path(cmds.referenceQuery(child[0], filename=True)).parts
@@ -51,14 +52,15 @@ class ExtractAssemblyJson(plugin.MayaExtractorPlugin):
                     "asset_type": asset_type,
                     "asset_name": asset_name,
                     "product_name": product_name,
-                    "object_name": obj,
+                    "object_name": object_name,
+                    "object_path": object_path,
                     "translation": translation,
                     "rotation": [rotation.x, rotation.y, rotation.z, rotation.w],
                     "scale": scale,
                 }
                 objects_data.append(transform_data)
             else:
-                cmds.warning(f"Object {obj} does not have a single child reference. Skipping.")
+                cmds.warning(f"Object {obj} does not have a child reference, skipping!")
 
         assembly_name = Path(get_current_folder_path()).name
 
