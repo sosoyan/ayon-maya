@@ -110,9 +110,12 @@ class LocalRefs:
         if self.is_referenced:
             cmds.file(self.scene_path, open=True, force=True, save=False)
             cmds.file(modified=False)
+            
+            try:
+                os.remove(self.tmp_scene_path)
+            except FileNotFoundError:
+                pass
 
-            os.remove(self.tmp_scene_path)
-        
         return False
 
 class ExtractMgearGame(plugin.MayaExtractorPlugin,
