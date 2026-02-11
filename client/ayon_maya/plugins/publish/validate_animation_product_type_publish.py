@@ -69,8 +69,8 @@ class ValidateAnimationProductTypePublish(plugin.MayaInstancePlugin):
             "fbx": "animation.fbx" in instance.data["families"],
             "ExtractAnimation": _is_plugin_active("ExtractAnimation"),
             "ExtractMayaUsdAnim": _is_plugin_active("ExtractMayaUsdAnim"),
-            "ExtractMultiverseUsdAnim": _is_plugin_active(
-                "ExtractMultiverseUsdAnim"),
+            "ExtractMultiverseUsdAnim": _is_plugin_active("ExtractMultiverseUsdAnim"),
+            "ExtractMgearAnimation": _is_plugin_active("ExtractMgearAnimation")
         }
         active = [key for key, state in active_check.items() if state]
 
@@ -88,7 +88,7 @@ class ValidateAnimationProductTypePublish(plugin.MayaInstancePlugin):
             raise PublishValidationError(
                 f"Animation instance generates no products: {name}\n"
                 "Make sure to enable at least one of the export(s) "
-                "product types: FBX, Alembic and/or USD.",
+                "product types: FBX, mGear FBX, Alembic and/or USD.",
                 description=self.get_description()
             )
 
